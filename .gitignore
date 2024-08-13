@@ -1,0 +1,19 @@
+.idea
+__pycache__
+
+#config
+config.ini
+
+# demo assets
+demo*
+response.dat
+response.json
+payload.json
+ai_works_space
+
+# virtual environment
+.venv
+dist
+build
+*.egg-info
+tests
