@@ -23,7 +23,7 @@ class DeepSeekBot(ChatBot):
         # Call the user by name
         return f'call {name} success, job done'
 
-    def __init__(self, post_words=print_words):
+    def __init__(self, post_words=print_words, function_call_feat=False):
         super().__init__(post_words)
         config_file = 'config.ini'
         config = configparser.ConfigParser()
@@ -59,9 +59,14 @@ class DeepSeekBot(ChatBot):
         self.max_tokens = 2048
         self.temperature = 1
         self.top_p = 1
-        self.functions = [self.open_browser, self.call_user_by_name]
-        self.append_global_exposed_functions()
-        self.tools = [ai_assist.collect_function_as_tool(func) for func in self.functions]
+        self.function_call_features = function_call_feat
+        if function_call_feat:
+            self.functions = [self.open_browser, self.call_user_by_name]
+            self.append_global_exposed_functions()
+            self.tools = [ai_assist.collect_function_as_tool(func) for func in self.functions]
+        else:
+            self.tools = []
+            self.functions = []
         self.choices = []
 
     def append_global_exposed_functions(self):
@@ -81,6 +86,8 @@ class DeepSeekBot(ChatBot):
         return None
 
     def execute_func(self, function_tool, **kwargs):
+        if not self.function_call_features:
+            return ''
         tool_details = function_tool['function']
         function_name = tool_details['name']
         function_desc = tool_details['description']
