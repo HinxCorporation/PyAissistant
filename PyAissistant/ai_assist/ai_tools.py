@@ -16,15 +16,17 @@ class FunctionProperties:
 
 
 class FunctionParameters:
-    def __init__(self, param_type, properties, required):
+    def __init__(self, param_type, properties, required, additionalProperties=False):
         self.type = param_type
         self.properties = properties
         self.required = required
+        self.additionalProperties = additionalProperties
 
 
 class Function:
     def __init__(self, name, description, parameters):
         self.name = name
+        self.strict: False
         self.description = description
         self.parameters = parameters
 
@@ -54,7 +56,7 @@ def create_payload_from_function(func):
         if param.annotation == str:
             param_type = "string"
         else:
-            param_type = "unknown"  # You can extend this to handle other types
+            param_type = "object"  # You can extend this to handle other types
         description = f"Description for {param_name}"  # This should be dynamically set based on your requirements
         param_obj = FunctionParameter(param_type, description)
         properties.add_property(param_name, param_obj)

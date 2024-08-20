@@ -125,14 +125,36 @@ class DeepSeekBot(ChatBot):
     def _generate_response(self, user_input: str) -> [str, str, dict]:
         return self._self_continue()
 
-    def _self_continue(self):
-        # response = self.client.request_completion(model="llama3.1", stream=True, prompt=message)
-        chain = self.message_chain()
-        model = self.model
-        payload = json.dumps({
+    def _finish_deep_seek_payload(self, chain):
+        # Configuring function calling behavior using the tool_choice parameter By default, the model is configured
+        # to automatically select which functions to call, as determined by the tool_choice: "auto" setting. We offer
+        # three ways to customize the default behavior: To force the model to always call one or more functions,
+        # you can set tool_choice: "required". The model will then always select one or more function(s) to call.
+        # This is useful for example if you want the model to pick between multiple actions to perform next. To force
+        # the model to call a specific function, you can set tool_choice: {"type": "function", "function": {"name":
+        # "my_function"}}. To disable function calling and force the model to only generate a user-facing message,
+        # you can either provide no tools, or set tool_choice: "none".
+        if self.function_call_features:
+            tools_exists = self.tools is not None and len(self.tools) > 0
+            if tools_exists:
+                return json.dumps({
+                    "messages": chain,
+                    "model": self.model,
+                    "frequency_penalty": 0,
+                    "max_tokens": self.max_tokens,
+                    "presence_penalty": 0,
+                    "stop": None,  # stop continue while this word is generated
+                    "stream": self.stream,
+                    "temperature": self.temperature,
+                    "top_p": self.top_p,
+                    "tools": self.tools,
+                    "tool_choice": 'auto',
+                    "logprobs": False,
+                    "top_logprobs": None
+                })
+        return json.dumps({
             "messages": chain,
-            "tools": self.tools,
-            "model": model,
+            "model": self.model,
             "frequency_penalty": 0,
             "max_tokens": self.max_tokens,
             "presence_penalty": 0,
@@ -140,9 +162,16 @@ class DeepSeekBot(ChatBot):
             "stream": self.stream,
             "temperature": self.temperature,
             "top_p": self.top_p,
+            "tools": None,
+            "tool_choice": "none",
             "logprobs": False,
             "top_logprobs": None
         })
+
+    def _self_continue(self):
+        # response = self.client.request_completion(model="llama3.1", stream=True, prompt=message)
+        chain = self.message_chain()
+        payload = self._finish_deep_seek_payload(chain)
         if self.cache_transitions:
             with open('payload.json', 'w', encoding='utf-8') as f:
                 f.write(payload)
@@ -176,9 +205,11 @@ class DeepSeekBot(ChatBot):
         except requests.exceptions.RequestException as e:
             print(e)
             logging.error(f"Request error: {e}")
+            raise e
         except Exception as e:
             print(e)
             logging.error(f"Error: {e}")
+            raise e
 
         # from message stack line 0 read id
         try:
