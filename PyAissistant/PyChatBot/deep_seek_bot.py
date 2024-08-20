@@ -61,13 +61,19 @@ class DeepSeekBot(ChatBot):
         self.top_p = 1
         self.function_call_features = function_call_feat
         if function_call_feat:
-            self.functions = [self.open_browser, self.call_user_by_name]
-            self.append_global_exposed_functions()
-            self.tools = [ai_assist.collect_function_as_tool(func) for func in self.functions]
+            self.setup_function_tools()
         else:
             self.tools = []
             self.functions = []
         self.choices = []
+
+    def setup_function_tools(self):
+        self.functions = self._get_demo_functions()
+        self.append_global_exposed_functions()
+        self.tools = [ai_assist.collect_function_as_tool(func) for func in self.functions]
+
+    def _get_demo_functions(self):
+        return [self.open_browser, self.call_user_by_name]
 
     def append_global_exposed_functions(self):
         exposed_functions = list_exposed_functions()
@@ -218,6 +224,4 @@ class DeepSeekBot(ChatBot):
             uuid_tex = json_data.get('id')
         except:
             uuid_tex = generate_uuid(32)
-        # self._write_out('\n----------DEMO ENDS-----------\n')
-
         return response_text, uuid_tex, {"function_calls": message_func.get_extras()}
