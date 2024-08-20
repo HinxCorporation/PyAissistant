@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="PyAissistant",
-    version="0.1.11",
+    version="0.1.12",
     author="Hinx Vietti(Lai)",
     author_email="Hinxvietti@gmail.com",
     description="A Python package designed to provide a user-friendly interface for AI developers working with "
@@ -23,11 +23,9 @@ setup(
     python_requires='>=3.9',
     install_requires=[
         "ollama-api~=0.1.1",    # hinx vietti dev version for chat api with local run ollama server. chat complete
-        "setuptools~=68.2.0",
         "psutil~=6.0.0",
         "tabulate~=0.9.0",
         "colorama~=0.4.6",
-        "openai~=1.40.0",
         "requests~=2.32.3",
     ],
 )
