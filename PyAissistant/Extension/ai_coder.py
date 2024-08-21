@@ -1,8 +1,28 @@
-from .ai_extension import ai_exposed_function as exposed_function
-from .ai_code_tool import *
+import json
 
+from .ai_code_tool import *
+from .ai_extension import ai_exposed_function as exposed_function
 
 Workspace = 'ai_works_space'
+
+
+@exposed_function
+def ls(path: str):
+    """
+    list path, top level.
+    :param path: the folder you want to list
+    :return:result or top level files and folders, format json str
+    """
+    global Workspace
+    location = os.path.join(Workspace, path)
+    if not os.path.exists(location):
+        return 'path not exist'
+    sets = [json.dumps({
+        "path": entry.path,
+        "name": entry.name,
+        "folder": entry.is_dir()
+    }) for entry in os.scandir(location)]
+    return '\n'.join(sets)
 
 
 @exposed_function
@@ -42,8 +62,8 @@ def create_project_view_by_view_string(project, view_string):
     :return: result of creating the view
     """
     try:
-        root_path = os.path.join(Workspace, project)
-        root_path = os.path.abspath(root_path)
+        # root_path = os.path.join(Workspace, project)
+        root_path = os.path.abspath(Workspace)
         if not os.path.exists(root_path):
             os.makedirs(root_path)
         create_files_from_text(root_path, view_string)

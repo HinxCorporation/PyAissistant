@@ -1,10 +1,12 @@
-from typing import List, Optional
+import configparser
+import logging
 
-from openai.types.chat.chat_completion_message import ChatCompletionMessage
 from openai.types.chat.chat_completion_message_tool_call import ChatCompletionMessageToolCall, Function
 
 from .Chat import *
+from .ai_executor import AIExecutor
 from .chat_bot_util import *
+from ..Extension.ai_extension import *
 
 
 class ChatBot:
@@ -12,7 +14,7 @@ class ChatBot:
         self.current_chat: Chat
         self.current_chat = None
         self.chats = []
-        self.tools = []
+        # self.tools = []
         self.new_chat()
         self._write_out = write_out
 
@@ -41,27 +43,17 @@ class ChatBot:
             extra_calls = _extras['function_calls']
             if extra_calls is not None and len(extra_calls) > 0:
                 self.current_chat.messages.append(self.calls_to_chain(extra_calls))
+                # execute function
                 if self.process_extra_items(_extras):
                     response, dialog_id, extras = self._self_continue()
                     return _response + self.bot_continue(response, dialog_id, extras)
         return _response
 
-    def calls_to_chain(self, call_stack):
-        if call_stack is None or len(call_stack) > 0:
+    @staticmethod
+    def calls_to_chain(call_stack):
+        if call_stack is not None and len(call_stack) > 0:
             return ToolCallMessage(call_stack)
-        calls: Optional[List[ChatCompletionMessageToolCall]] = []
-        for call in call_stack:
-            completed_call = self.complete_call(call)
-            if completed_call is not None:
-                calls.append(completed_call)
-            else:
-                print(f"Skipping call due to parsing error: {call}")
-
-        if len(calls) > 0:
-            return ChatCompletionMessage(tool_calls=calls)
-        else:
-            print(f"None Calls to chain")
-            return None
+        return None
 
     def _generate_response(self, message: str):
         """Generate a response based on the incoming message."""
@@ -79,6 +71,11 @@ class ChatBot:
 
     def get_system_prompt(self) -> []:
         return [get_message(self.system_prompt, SYS_ROLE)]
+
+    @property
+    def tools(self):
+        """List of tools available for the chat bot."""
+        return []
 
     @property
     def messages(self):
@@ -107,6 +104,8 @@ class ChatBot:
             if tools is not None:
                 if self.call_tools(tools):
                     is_continue = True
+        else:
+            pass
         return is_continue
 
     def get_function_by_name(self, name):
@@ -135,7 +134,6 @@ class ChatBot:
                 tool_name = item.get_function_name()
                 _tool = self.get_function_by_name(tool_name)
                 tool_call_id = item.get_function_call_id()
-                # exec_result = ""
                 if _tool is not None:
                     try:
                         exec_result = self.execute_func(_tool, **item.args_dict())
@@ -160,3 +158,58 @@ class ChatBot:
             id=call_id,
             function=func
         )
+
+
+class HinxtonChatBot(ChatBot):
+    def __init__(self, write_out, function_call_feat=False):
+        super().__init__(write_out)
+        config_file = 'config.ini'
+        config = configparser.ConfigParser()
+        try:
+            config.read(config_file, encoding='utf-8')
+            current = config.get('ai', 'current')
+            self.key = config.get(current, "key")
+            self.url = config.get(current, "url")
+            self.host = config.get(current, "host")
+            self.model = config.get(current, "current")
+            color_block_options = config.options('Colors')
+            self.colors = dict()
+            for key in color_block_options:
+                self.colors[key] = config.get('Colors', key)
+
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            logging.error(f"Error reading config file: {e}")
+        self.stream = True  # open async stream
+        self.max_tokens = 2048
+        self.temperature = 1
+        self.top_p = 1
+        self.function_call_features = function_call_feat
+        if function_call_feat:
+            self.executor = AIExecutor()
+            self.setup_function_tools()
+        else:
+            self.executor = None
+
+    def setup_function_tools(self):
+        functions = list_exposed_functions()
+        self.executor.extend_tools(functions)
+
+    def get_color(self, colorName):
+        exist = self.colors.__contains__(colorName)
+        if exist:
+            color = self.colors[colorName]
+        else:
+            color = None
+        return exist, color
+
+    @property
+    def tools(self):
+        return self.executor.tools
+
+    def execute_func(self, function_tool, **kwargs):
+        if not self.function_call_features:
+            return ''
+        return self.executor.execute(function_tool, **kwargs)
+
+    def _generate_response(self, user_input: str) -> [str, str, dict]:
+        return self._self_continue()

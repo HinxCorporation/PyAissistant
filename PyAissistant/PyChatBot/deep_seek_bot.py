@@ -4,14 +4,13 @@ import webbrowser
 
 import requests
 
-from .chat_api import ChatBot
+from .chat_api import HinxtonChatBot
 from .chat_bot_util import *
 from .deep_seek_message_process import DeepSeekMessage
-from .. import ai_assist
 from ..Extension.ai_extension import *
 
 
-class DeepSeekBot(ChatBot):
+class DeepSeekBot(HinxtonChatBot):
 
     @staticmethod
     def open_browser(url):
@@ -24,26 +23,19 @@ class DeepSeekBot(ChatBot):
         return f'call {name} success, job done'
 
     def __init__(self, post_words=print_words, function_call_feat=False):
-        super().__init__(post_words)
+        super().__init__(post_words, function_call_feat)
         config_file = 'config.ini'
         config = configparser.ConfigParser()
         try:
             config.read(config_file, encoding='utf-8')
             current = config.get('ai', 'current')
-            self.key = config.get(current, "key")
-            self.url = config.get(current, "url")
-            self.model = config.get(current, "current")
+
             self.cache_transitions = config.getboolean("setting", "cache_transitions", fallback=False)
             self.use_proxy = config.getboolean("setting", "use_proxy", fallback=False)
             self.proxy_uri = config.get("setting", "proxy", fallback='')
             print('AI(Deep Seek Tips):', current, self.url)
             if self.use_proxy:
                 print('using Proxy:', self.proxy_uri)
-
-            color_block_options = config.options('Colors')
-            self.colors = dict()
-            for key in color_block_options:
-                self.colors[key] = config.get('Colors', key)
 
         except (configparser.NoSectionError, configparser.NoOptionError) as e:
             logging.error(f"Error reading config file: {e}")
@@ -54,62 +46,21 @@ class DeepSeekBot(ChatBot):
             'Accept': 'application/json',
             'Authorization': f'Bearer {self.key}'
         }
-        self.stream = True  # open async stream
         self.block_mark = 'data:'
-        self.max_tokens = 2048
-        self.temperature = 1
-        self.top_p = 1
-        self.function_call_features = function_call_feat
-        if function_call_feat:
-            self.setup_function_tools()
-        else:
-            self.tools = []
-            self.functions = []
-        self.choices = []
 
     def setup_function_tools(self):
-        self.functions = self._get_demo_functions()
-        self.append_global_exposed_functions()
-        self.tools = [ai_assist.collect_function_as_tool(func) for func in self.functions]
+        functions = self._get_demo_functions()
+        functions.extend(list_exposed_functions())
+        self.executor.extend_tools(functions)
 
     def _get_demo_functions(self):
         return [self.open_browser, self.call_user_by_name]
-
-    def append_global_exposed_functions(self):
-        exposed_functions = list_exposed_functions()
-        self.functions.extend(exposed_functions)
 
     def create_request(self, **kwargs):
         if self.use_proxy:
             return requests.request("POST", self.url, stream=True, proxies={"https": self.proxy_uri, }, **kwargs)
         else:
             return requests.request("POST", self.url, stream=True, proxies={"http": "", "https": ""}, **kwargs)
-
-    def get_local_functions_by_name(self, method_name):
-        for func in self.functions:
-            if func.__name__ == method_name:
-                return func
-        return None
-
-    def execute_func(self, function_tool, **kwargs):
-        if not self.function_call_features:
-            return ''
-        tool_details = function_tool['function']
-        function_name = tool_details['name']
-        function_desc = tool_details['description']
-        logging.info(f" - (ai) Executing function: {function_name} with args: {kwargs} , go for {function_desc}")
-        matched_func = self.get_local_functions_by_name(function_name)
-        if matched_func is not None:
-            exec_result = matched_func(**kwargs)
-            if exec_result is not None:
-                logging.info(f" - (ai) Function {function_name} executed successfully, return value: {exec_result}")
-                return exec_result
-            else:
-                logging.info(f" - (ai) Function {function_name} executed successfully, but no return value found.")
-                return f"Function {function_name} successfully executed, but no return value found."
-        else:
-            logging.error(f" - (ai) Function not found: {function_name}")
-            return None
 
     def go_next(self, content: str):
         # find the first block
@@ -119,17 +70,6 @@ class DeepSeekBot(ChatBot):
             rest_content = content[position + len(self.block_mark):]
             return current_line, rest_content
         return '', content
-
-    def get_color(self, colorName):
-        exist = self.colors.__contains__(colorName)
-        if exist:
-            color = self.colors[colorName]
-        else:
-            color = None
-        return exist, color
-
-    def _generate_response(self, user_input: str) -> [str, str, dict]:
-        return self._self_continue()
 
     def _finish_deep_seek_payload(self, chain):
         # Configuring function calling behavior using the tool_choice parameter By default, the model is configured
@@ -224,4 +164,5 @@ class DeepSeekBot(ChatBot):
             uuid_tex = json_data.get('id')
         except:
             uuid_tex = generate_uuid(32)
-        return response_text, uuid_tex, {"function_calls": message_func.get_extras()}
+        extra = message_func.get_extras()
+        return response_text, uuid_tex, {"function_calls": extra}

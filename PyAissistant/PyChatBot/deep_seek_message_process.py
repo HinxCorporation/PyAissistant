@@ -1,5 +1,7 @@
 import json
 
+from openai.types.chat import ChatCompletionChunk
+
 
 class DeepSeekMessageUnit:
     def __init__(self, role):
@@ -39,6 +41,9 @@ class DeepSeekCall(DeepSeekMessageUnit):
         # self.call_function}, " f"call_func_arg={self.call_func_arg})")
 
     def args_dict(self):
+        arg_str = self.call_func_arg.strip()
+        if not arg_str:
+            return {}
         return json.loads(self.call_func_arg.strip())
 
     def get_function_name(self):
@@ -69,6 +74,24 @@ class DeepSeekChoiceUnit:
             if call.call_index == index:
                 return call
         return None
+
+    def add_tool_calls_openai(self, tool_calls):
+        if tool_calls is None:
+            return
+        for tool_call in tool_calls:
+            index = tool_call.index
+            call_unit = self.get_call_by_index(index)
+            if call_unit is None:
+                call_id = tool_call.id
+                function = tool_call.function
+                call_func_arg = function.arguments
+                call_function_name = function.name
+                if call_function_name is None and call_id is None:
+                    continue
+                call_type = tool_call.type
+                call_unit = DeepSeekCall(call_id, call_type, call_function_name, call_func_arg)
+                call_unit.call_index = index
+                self.tool_calls.append(call_unit)
 
     def process_message(self, msg):
         if msg is None:
@@ -127,6 +150,19 @@ class DeepSeekResponse:
     def get_functions_calls(self):
         return [call.tool_calls for call in self.choices]
 
+    def processes_choices_openai(self, choices):
+        for choice in choices:
+            index = choice.index
+            choice_unit = self.get_choice_by_index(index)
+            if choice_unit is None:
+                choice_unit = DeepSeekChoiceUnit(index, None, None)
+                self.choices.append(choice_unit)
+            delta = choice.delta
+            # open AI had make it complete inside
+            tool_calls = delta.tool_calls
+            choice_unit.add_tool_calls_openai(tool_calls)
+        pass
+
     def processes_choices(self, choices):
         words = None
         for choice in choices:
@@ -166,12 +202,50 @@ class DeepSeekMessage:
     def get_extras(self):
         stacks = [response.get_functions_calls() for response in self.chain]
         functions = []
+        # flatten
         for stack in stacks:
             for items in stack:
                 functions.extend(items)
         return functions
 
+    def process_open_ai_response(self, chunk: ChatCompletionChunk):
+        """
+        process as response text , a chunk
+        :param chunk:
+        :return:
+        """
+        response_id = chunk.id
+        block = self.find_block_on_chain_by_id(response_id)
+        if block is None:
+            object_type = chunk.object
+            created = chunk.created
+            model = chunk.model
+            block = DeepSeekResponse(response_id, object_type, created, model,
+                                     [], {}, '')
+            self.chain.append(block)
+        word = chunk.choices[0].delta.content
+
+        block.processes_choices_openai(chunk.choices)
+
+        if block.usage is None:
+            usage = chunk.usage
+            if usage:
+                block.usage = usage
+        if not block.system_fingerprint:
+            system_fingerprint = chunk.system_fingerprint
+            if system_fingerprint:
+                block.system_fingerprint = system_fingerprint
+        if word:
+            return word
+        else:
+            return None
+
     def process_new_line(self, line):
+        """
+        process as response text , a chunk
+        :param line:
+        :return:
+        """
         line = line.strip()
         if not line:
             return None
