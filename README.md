@@ -1,5 +1,11 @@
 # PyAissistant
 
+<p align="center">
+
+[![PyPI Version](https://img.shields.io/pypi/v/pyaissistant.svg)](https://pypi.org/project/pyaissistant/)[![PyPI Downloads](https://img.shields.io/pypi/dm/pyaissistant.svg)](https://pypi.org/project/pyaissistant/)
+
+</p>
+
 Welcome to **Py AI Assistant**, a Python package designed to provide a user-friendly interface for AI developers working with Python. This package aims to streamline the integration of AI functionalities into your projects, making it easier to leverage advanced AI capabilities.
 
 - A user-friendly interface for AI developers working with Python.

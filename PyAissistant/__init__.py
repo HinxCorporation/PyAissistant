@@ -26,7 +26,9 @@ __all__ = [
     'DeepSeekMessage',
     'OllamaBot',
     'collect_function_as_tool',
-    'init_coder'
+    'init_coder',
+    'hello',
+    'create_config_file'
 ]
 
 
