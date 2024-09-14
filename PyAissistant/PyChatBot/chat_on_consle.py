@@ -1,6 +1,12 @@
-from . import *
-from .deep_seek_bot import *
-from .ollama_bot import *
+import os
+
+from colorama import Fore
+from colorama import Style
+
+from .__console_extend import greet, is_quit, process_ai_message, out_ai_role_msg, tips_out
+from .chat_api import ChatBot
+from .chat_bot_util import clear_console
+from .deep_seek_bot import DeepSeekBot
 
 
 class ConsoleChat:

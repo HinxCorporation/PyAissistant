@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="PyAissistant",
-    version="0.1.14",
+    version="0.1.15",
     author="Hinx Vietti(Lai)",
     author_email="Hinxvietti@gmail.com",
     description="A Python package designed to provide a user-friendly interface for AI developers working with "
@@ -27,5 +27,6 @@ setup(
         "tabulate~=0.9.0",
         "colorama~=0.4.6",
         "requests~=2.32.3",
+        "openai~=1.40.0"
     ],
 )

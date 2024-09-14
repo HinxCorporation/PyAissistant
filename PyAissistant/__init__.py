@@ -1,7 +1,33 @@
-from . import *
-from .Extension import *
-from .PyChatBot import *
-from .ai_assist import *
+from .Extension import ai_exposed_function, list_all_functions,init_coder
+from .PyChatBot import Message, ToolCallMessage, ToolResponse, Chat, ToolCall, AIExecutor, ChatBot, HinxtonChatBot, \
+    ConsoleChat, DeepSeekOpenAI, DeepSeekBot, DeepSeekMessageUnit, DeepSeekCall, DeepSeekMessageContent, \
+    DeepSeekChoiceUnit, DeepSeekResponse, DeepSeekMessage, OllamaBot
+from .ai_assist import collect_function_as_tool
+
+__all__ = [
+    'ai_exposed_function',
+    'list_all_functions',
+    'Message',
+    'ToolCallMessage',
+    'ToolResponse',
+    'Chat',
+    'ToolCall',
+    'AIExecutor',
+    'ChatBot',
+    'HinxtonChatBot',
+    'ConsoleChat',
+    'DeepSeekOpenAI',
+    'DeepSeekBot',
+    'DeepSeekMessageUnit',
+    'DeepSeekCall',
+    'DeepSeekMessageContent',
+    'DeepSeekChoiceUnit',
+    'DeepSeekResponse',
+    'DeepSeekMessage',
+    'OllamaBot',
+    'collect_function_as_tool',
+    'init_coder'
+]
 
 
 def __get_config_example():

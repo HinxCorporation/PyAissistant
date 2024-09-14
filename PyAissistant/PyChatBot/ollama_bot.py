@@ -10,7 +10,7 @@ class OllamaBot(ChatBot):
         super().__init__(post_words)
         self.client = OllamaClient()
 
-    def _generate_response(self, user_input: str) -> [str, str]:
+    def _generate_response(self, user_input: str):
         lines = {}
         # response = self.client.request_completion(model="llama3.1", stream=True, prompt=message)
         chain = self.message_chain()
@@ -41,4 +41,4 @@ class OllamaBot(ChatBot):
             line = lines[lineIndex]
             self._write_out(try_get_allama_words(line))
             lineIndex += 1
-        return msg_stack, generate_uuid(32)
+        return msg_stack, generate_uuid(32), None
