@@ -3,14 +3,18 @@ import logging
 
 from openai.types.chat.chat_completion_message_tool_call import ChatCompletionMessageToolCall, Function
 
-from .Chat import *
+from .Chat import Chat, Message, ToolCallMessage, ToolResponse
 from .ai_executor import AIExecutor
-from .chat_bot_util import *
-from ..Extension.ai_extension import *
+from .chat_bot_util import generate_uuid, BOT_ROLE, SYS_ROLE, parse_message, get_message
+from ..Extension.ai_extension import list_exposed_functions
 
 
 class ChatBot:
     def __init__(self, write_out):
+        """
+        Custom implementation needs : _generate_response, _self_continue, _tools
+        :param write_out:
+        """
         self.current_chat: Chat
         self.current_chat = None
         self.chats = []
@@ -56,12 +60,21 @@ class ChatBot:
         return None
 
     def _generate_response(self, message: str):
-        """Generate a response based on the incoming message."""
+        """
+        Generate a response based on the incoming message. complete message (and make continue on chat)
+        Also means complete message chain on this method. then send requests to bot.
+        :param message: str
+        :return: response : str, dialog_id : str, extras : dict
+        """
         # Placeholder for actual response generation logic
         # returns more items with extra if you wants to
         return f"Echo: {message}", 'id', None
 
     def _self_continue(self):
+        """
+        Message chain was completed, here is request and make response continue
+        :return: message : str, dialog_id : str, extras : dict
+        """
         # calls while tools response
         # function will like generate_response , but did not send anything.
         return "call nothing", '', None
@@ -162,6 +175,12 @@ class ChatBot:
 
 class HinxtonChatBot(ChatBot):
     def __init__(self, write_out, function_call_feat=False):
+        """
+        from config['ai'].current import key, url, host, model and init chat bot;
+        Only needs to complete _self_continue
+        :param write_out: custom write out function
+        :param function_call_feat: str. enable function call feature or not.
+        """
         super().__init__(write_out)
         config_file = 'config.ini'
         config = configparser.ConfigParser()

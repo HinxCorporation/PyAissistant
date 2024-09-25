@@ -1,13 +1,14 @@
 import configparser
+import json
 import logging
 import webbrowser
 
 import requests
 
 from .chat_api import HinxtonChatBot
-from .chat_bot_util import *
+from .chat_bot_util import generate_uuid, print_words
 from .deep_seek_message_process import DeepSeekMessage
-from ..Extension.ai_extension import *
+from ..Extension.ai_extension import list_exposed_functions
 
 
 class DeepSeekBot(HinxtonChatBot):

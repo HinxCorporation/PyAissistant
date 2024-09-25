@@ -24,14 +24,36 @@ def print_words(word: str):
 
 class DeepSeekOpenAI(HinxtonChatBot):
 
-    def __init__(self, post_words=print_words, function_call_feat=False):
+    def __init__(self,
+                 post_words=print_words,
+                 function_call_feat=False,
+                 custom_host=None,
+                 custom_key=None,
+                 custom_model=None,
+                 custom_max_tokens=None,
+                 custom_temperature=None,
+                 custom_payloads=None):
         super().__init__(post_words, function_call_feat)
+        if custom_host is not None:
+            self.host = custom_host
+        if custom_key is not None:
+            self.key = custom_key
         self.client = OpenAI(
             api_key=self.key,
             base_url=self.host,
         )
+        if custom_model is not None:
+            self.model = custom_model
+        if custom_max_tokens is not None:
+            self.max_tokens = custom_max_tokens
+        if custom_temperature is not None:
+            self.temperature = custom_temperature
+        if custom_payloads is not None:
+            self.custom_payloads = custom_payloads
+        else:
+            self.custom_payloads = None
 
-    def _finish_deep_seek_payload(self, chain):
+    def _finish_openai_payload(self, chain):
         if self.function_call_features:
             tools_exists = self.tools is not None and len(self.tools) > 0
             if tools_exists:
@@ -56,12 +78,14 @@ class DeepSeekOpenAI(HinxtonChatBot):
 
     def _self_continue(self):
         response_text = ''
-        msg_stack = ""
         uuid_tex: str = ''
         message_func = DeepSeekMessage()
         try:
             messages = self.message_chain()
-            stream = self.client.chat.completions.create(**self._finish_deep_seek_payload(messages))
+            payload = self._finish_openai_payload(messages)
+            if self.custom_payloads is not None:
+                payload.update(self.custom_payloads)
+            stream = self.client.chat.completions.create(**payload)
             for response in stream:
                 # print(, end='')
                 w = response.choices[0].delta.content
@@ -72,9 +96,8 @@ class DeepSeekOpenAI(HinxtonChatBot):
                     self._write_out(w)
                     response_text += w
                 else:
-                    pass
                     # self._write_out('.')
-
+                    pass
         except requests.exceptions.RequestException as e:
             print(e)
             logging.error(f"Request error: {e}")
