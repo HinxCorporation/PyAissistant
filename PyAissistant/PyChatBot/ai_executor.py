@@ -8,6 +8,14 @@ class AIExecutor:
         self.tools = []
         self.functions = []
 
+    def clear_tools(self):
+        self.tools = []
+        self.functions = []
+
+    # def remove_tool(self, tool):
+    #     self.functions.remove(tool)
+    #     self.tools.remove(ai_assist.collect_function_as_tool(tool))
+
     def add_tool(self, tool):
         self.functions.append(tool)
         self.tools.append(ai_assist.collect_function_as_tool(tool))
@@ -24,6 +32,10 @@ class AIExecutor:
             if func.__name__ == method_name:
                 return func
         return None
+
+    def list_tools(self):
+        functions_names = [func.__name__ for func in self.functions]
+        return functions_names
 
     def execute(self, function_tool, **kwargs):
         tool_details = function_tool['function']

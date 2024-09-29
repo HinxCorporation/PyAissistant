@@ -92,6 +92,10 @@ class DeepSeekChoiceUnit:
                 call_unit = DeepSeekCall(call_id, call_type, call_function_name, call_func_arg)
                 call_unit.call_index = index
                 self.tool_calls.append(call_unit)
+            else:
+                function = tool_call.function
+                call_func_arg = function.arguments
+                call_unit.call_func_arg += call_func_arg
 
     def process_message(self, msg):
         if msg is None:
@@ -151,6 +155,7 @@ class DeepSeekResponse:
         return [call.tool_calls for call in self.choices]
 
     def processes_choices_openai(self, choices):
+        # response.choices[0].delta.tool_calls
         for choice in choices:
             index = choice.index
             choice_unit = self.get_choice_by_index(index)
@@ -214,6 +219,7 @@ class DeepSeekMessage:
         :param chunk:
         :return:
         """
+        # response.choices[0].delta.tool_calls
         response_id = chunk.id
         block = self.find_block_on_chain_by_id(response_id)
         if block is None:

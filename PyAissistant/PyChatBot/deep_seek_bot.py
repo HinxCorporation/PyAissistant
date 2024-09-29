@@ -2,7 +2,7 @@ import configparser
 import json
 import logging
 import webbrowser
-
+import os
 import requests
 
 from .chat_api import HinxtonChatBot
@@ -166,4 +166,9 @@ class DeepSeekBot(HinxtonChatBot):
         except:
             uuid_tex = generate_uuid(32)
         extra = message_func.get_extras()
+
+        if os.getenv('DEBUG', False):
+            for fun in extra:
+                # DeepSeekCall
+                self._write_out(f"\n\033[31mFunction call: {fun.call_function}({fun.call_func_arg})\033[0m\n")
         return response_text, uuid_tex, {"function_calls": extra}

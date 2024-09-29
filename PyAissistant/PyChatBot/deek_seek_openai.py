@@ -92,6 +92,9 @@ class DeepSeekOpenAI(HinxtonChatBot):
                 if not uuid_tex:
                     uuid_tex = response.id
                 message_func.process_open_ai_response(response)
+                # if response.choices[0].delta.tool_calls is not None:
+                #     func_detail = response.choices[0].delta.tool_calls[0].function
+                #     self._write_out(f"\nFunction call: {func_detail.name}({func_detail.arguments})\n")
                 if w is not None:
                     self._write_out(w)
                     response_text += w
@@ -108,5 +111,11 @@ class DeepSeekOpenAI(HinxtonChatBot):
             raise e
         if not uuid_tex:
             uuid_tex = generate_uuid(32)
+
         extra = message_func.get_extras()
+        # if debug env
+        if os.getenv('DEBUG', False):
+            for fun in extra:
+                # DeepSeekCall
+                self._write_out(f"\n\033[31mFunction call: {fun.call_function}({fun.call_func_arg})\033[0m\n")
         return response_text, uuid_tex, {"function_calls": extra}
