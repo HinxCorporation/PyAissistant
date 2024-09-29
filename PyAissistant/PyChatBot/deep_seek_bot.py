@@ -1,8 +1,9 @@
 import configparser
 import json
 import logging
-import webbrowser
 import os
+import webbrowser
+
 import requests
 
 from .chat_api import HinxtonChatBot
@@ -127,27 +128,35 @@ class DeepSeekBot(HinxtonChatBot):
         message_func = DeepSeekMessage()
         try:
             response = self.create_request(headers=self.headers, data=payload)
-            response.raise_for_status()
-            response_f = None
-            if self.cache_transitions:
-                response_f = open('response.json', 'wb')
-            for chunk in response.iter_content(chunk_size=1024):
+            if self.stream:
+                response.raise_for_status()
+                response_f = None
                 if self.cache_transitions:
-                    response_f.write(chunk)
-                chunk_text = chunk.decode('utf-8')  # Decode bytes to string
-                msg_stack += chunk_text
-                # process every block
-                while msg_stack and self.block_mark in msg_stack:
-                    # msg_stack, w = self.try_outline(msg_stack)
-                    # response_text += w
-                    line, msg_stack = self.go_next(msg_stack)
-                    if line:
-                        w = message_func.process_new_line(line)
-                        if w is not None:
-                            self._write_out(w)
-                            response_text += w
-            if response_f:
-                response_f.close()
+                    response_f = open('response.json', 'wb')
+                for chunk in response.iter_content(chunk_size=1024):
+                    if self.cache_transitions:
+                        response_f.write(chunk)
+                    chunk_text = chunk.decode('utf-8')  # Decode bytes to string
+                    msg_stack += chunk_text
+                    # process every block
+                    while msg_stack and self.block_mark in msg_stack:
+                        # msg_stack, w = self.try_outline(msg_stack)
+                        # response_text += w
+                        line, msg_stack = self.go_next(msg_stack)
+                        if line:
+                            w = message_func.process_new_line(line)
+                            if w is not None:
+                                self._write_out(w)
+                                response_text += w
+                if response_f:
+                    response_f.close()
+            else:
+                # response_text = response.text
+                # print(response_text)
+                long_tex = message_func.process_response_straight(response.json())
+                if long_tex is not None and len(long_tex) > 0:
+                    self._write_out(long_tex)
+                pass
 
         except requests.exceptions.RequestException as e:
             print(e)

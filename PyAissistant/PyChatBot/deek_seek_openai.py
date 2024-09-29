@@ -86,21 +86,27 @@ class DeepSeekOpenAI(HinxtonChatBot):
             if self.custom_payloads is not None:
                 payload.update(self.custom_payloads)
             stream = self.client.chat.completions.create(**payload)
-            for response in stream:
-                # print(, end='')
-                w = response.choices[0].delta.content
-                if not uuid_tex:
-                    uuid_tex = response.id
-                message_func.process_open_ai_response(response)
-                # if response.choices[0].delta.tool_calls is not None:
-                #     func_detail = response.choices[0].delta.tool_calls[0].function
-                #     self._write_out(f"\nFunction call: {func_detail.name}({func_detail.arguments})\n")
-                if w is not None:
-                    self._write_out(w)
-                    response_text += w
-                else:
-                    # self._write_out('.')
-                    pass
+            # This step, Ensure print out message and collect the function call details
+            if self.stream:
+                for response in stream:
+                    # print(, end='')
+                    w = response.choices[0].delta.content
+                    if not uuid_tex:
+                        uuid_tex = response.id
+                    message_func.process_open_ai_response(response)
+                    # if response.choices[0].delta.tool_calls is not None:
+                    #     func_detail = response.choices[0].delta.tool_calls[0].function
+                    #     self._write_out(f"\nFunction call: {func_detail.name}({func_detail.arguments})\n")
+                    if w is not None:
+                        self._write_out(w)
+                        response_text += w
+                    else:
+                        # self._write_out('.')
+                        pass
+            else:
+                full_msg = message_func.process_open_ai_response_straight(stream)
+                if full_msg is not None:
+                    self._write_out(full_msg)
         except requests.exceptions.RequestException as e:
             print(e)
             logging.error(f"Request error: {e}")

@@ -168,6 +168,46 @@ class DeepSeekResponse:
             choice_unit.add_tool_calls_openai(tool_calls)
         pass
 
+    def processes_choices_openai_straight(self, choices):
+        for choice in choices:
+            index = choice.index
+            finish_reason = choice.finish_reason
+            logprobs = choice.logprobs
+            message = choice.message
+            # content = message.get('content')
+            # refusal = message.get('refusal')
+            # role = message.get('role')
+            # function_calls = message.get('function_calls')
+            tool_calls = message.tool_calls
+            choice_unit = self.get_choice_by_index(index)
+            if choice_unit is None:
+                choice_unit = DeepSeekChoiceUnit(index, logprobs, finish_reason)
+                self.choices.append(choice_unit)
+            choice_unit.add_tool_calls_openai(tool_calls)
+        pass
+
+    def processes_choices_straight(self, choices):
+        words = None
+        for choice in choices:
+            index = choice.get('index')
+            if index is None:
+                continue
+            choice_unit = self.get_choice_by_index(index)
+            if choice_unit is None:
+                choice_unit = DeepSeekChoiceUnit(index, None, None)
+                self.choices.append(choice_unit)
+
+            message = choice.get('message', '')
+            words = choice_unit.process_message(message)
+            logprobs = choice.get('logprobs', None)
+            if logprobs is not None:
+                choice_unit.logprobs = logprobs
+
+            finish_reason = choice.get('finish_reason', None)
+            if finish_reason is not None:
+                choice_unit.finish_reason = finish_reason
+        return words
+
     def processes_choices(self, choices):
         words = None
         for choice in choices:
@@ -213,6 +253,30 @@ class DeepSeekMessage:
                 functions.extend(items)
         return functions
 
+    def process_open_ai_response_straight(self, chunk):
+        response_id = chunk.id
+        block = self.find_block_on_chain_by_id(response_id)
+        if block is None:
+            object_type = chunk.object
+            created = chunk.created
+            model = chunk.model
+            block = DeepSeekResponse(response_id, object_type, created, model,
+                                     [], {}, '')
+            self.chain.append(block)
+        block.processes_choices_openai_straight(chunk.choices)
+        if block.usage is None:
+            usage = chunk.usage
+            if usage:
+                block.usage = usage
+        if not block.system_fingerprint:
+            system_fingerprint = chunk.system_fingerprint
+            if system_fingerprint:
+                block.system_fingerprint = system_fingerprint
+        msg_list = [choice.message.content for choice in chunk.choices if choice.message.content]
+        if msg_list:
+            return '\n'.join(msg_list)
+        return None
+
     def process_open_ai_response(self, chunk: ChatCompletionChunk):
         """
         process as response text , a chunk
@@ -245,6 +309,26 @@ class DeepSeekMessage:
             return word
         else:
             return None
+
+    def process_response_straight(self, json_obj):
+        response_id = json_obj.get('id', '')
+        block = self.find_block_on_chain_by_id(response_id)
+        if block is None:
+            object_type = json_obj.get('object', '')
+            created = json_obj.get('created', '')
+            model = json_obj.get('model', '')
+            system_fingerprint = json_obj.get('system_fingerprint', '')
+            usage = json_obj.get('usage', '')
+            block = DeepSeekResponse(response_id, object_type, created, model,
+                                     [], usage, system_fingerprint)
+            self.chain.append(block)
+        choices = json_obj.get('choices', [])
+        word = ''
+        if choices is not None:
+            _w = block.processes_choices_straight(choices)
+            if _w is not None:
+                word += _w
+        return word
 
     def process_new_line(self, line):
         """
