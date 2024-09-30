@@ -28,12 +28,18 @@ To install the `PyAissistant` package, you can use pip:
 pip install PyAissistant
 ```
 
+As for update this package, you can use:
+
+```bash
+pip install --upgrade PyAissistant
+```
+
 ## Usage
 
 show hello from the package and learn from the tips
 
 ```python
-from PyAissistant import *
+from PyAissistant import hello
 
 # show hello from PyAissistant
 hello()

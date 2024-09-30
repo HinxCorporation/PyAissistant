@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="PyAissistant",
-    version="0.1.19",
+    version="0.1.20",
     author="Hinx Vietti(Lai)",
     author_email="Hinxvietti@gmail.com",
     description="A Python package designed to provide a user-friendly interface for AI developers working with "
