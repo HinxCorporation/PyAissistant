@@ -107,6 +107,7 @@ class DeepSeekOpenAI(HinxtonChatBot):
                 full_msg = message_func.process_open_ai_response_straight(stream)
                 if full_msg is not None:
                     self._write_out(full_msg)
+                    response_text = full_msg
         except requests.exceptions.RequestException as e:
             print(e)
             logging.error(f"Request error: {e}")

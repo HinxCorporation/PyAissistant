@@ -25,6 +25,13 @@ class DeepSeekBot(HinxtonChatBot):
         return f'call {name} success, job done'
 
     def __init__(self, post_words=print_words, function_call_feat=False):
+        """
+        from config.ini read AI config, from AI section get custom model block and complete construction;
+        A bot with chat completion features, function calling features, and message processing features.
+        With REST ful API, it can interact with any chatbot platform.
+        :param post_words:
+        :param function_call_feat:
+        """
         super().__init__(post_words, function_call_feat)
         config_file = 'config.ini'
         config = configparser.ConfigParser()
@@ -60,9 +67,23 @@ class DeepSeekBot(HinxtonChatBot):
 
     def create_request(self, **kwargs):
         if self.use_proxy:
-            return requests.request("POST", self.url, stream=True, proxies={"https": self.proxy_uri, }, **kwargs)
+            return requests.request("POST",
+                                    self.chat_completion_url,
+                                    stream=True,
+                                    proxies={"https": self.proxy_uri, },
+                                    **kwargs)
         else:
-            return requests.request("POST", self.url, stream=True, proxies={"http": "", "https": ""}, **kwargs)
+            return requests.request("POST",
+                                    self.chat_completion_url,
+                                    stream=True,
+                                    proxies={"http": "", "https": ""},
+                                    **kwargs)
+
+    @property
+    def chat_completion_url(self):
+        if self.url and self.url.startswith('http'):
+            return self.url
+        return self.host + '/chat/completion'
 
     def go_next(self, content: str):
         # find the first block
